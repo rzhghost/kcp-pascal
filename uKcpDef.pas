@@ -2,7 +2,7 @@ unit uKcpDef;
 
 interface
 uses
-  System.SysUtils, Winapi.Windows;
+  System.SysUtils;
 
 {$INCLUDE 'kcpdef.inc'}
 
@@ -173,7 +173,7 @@ const
 
 procedure assert(f: Boolean; msg: string);
 procedure printf(const fmt: PTSTR; const param: array of const);
-procedure memcpy(d: Pointer; s: Pointer; len: Int32);
+procedure memcpy(Source: Pointer; Destination: Pointer; len: Int32);
 
 implementation
 
@@ -189,9 +189,9 @@ begin
   Write(Format(fmt, param));
 end;
 
-procedure memcpy(d: Pointer; s: Pointer; len: Int32);
+procedure memcpy(Source: Pointer; Destination: Pointer; len: Int32);
 begin
-  CopyMemory(d, s, len);
+  System.Move(Source^, Destination^, len);
 end;
 
 end.
