@@ -102,7 +102,7 @@ const
   IKCP_ASK_SEND    = 1;		  // need to send IKCP_CMD_WASK
   IKCP_ASK_TELL    = 2;		  // need to send IKCP_CMD_WINS
   IKCP_WND_SND     = 32;
-  IKCP_WND_RCV     = 32;
+  IKCP_WND_RCV     = 128;   // must >= max fragment size
   IKCP_MTU_DEF     = 1400;
   IKCP_ACK_FAST	   = 3;
   IKCP_INTERVAL_   = 100;
@@ -595,7 +595,7 @@ begin
   else
     count := (len + kcp^.mss - 1) div kcp^.mss;
 
-  if (count > 255) then Exit(-2);
+  if (count >= IKCP_WND_RCV) then Exit(-2);
 
   if (count = 0) then count := 1;
 
@@ -647,7 +647,7 @@ begin
     kcp^.rx_srtt := (7 * kcp^.rx_srtt + rtt) div 8;
     if (kcp^.rx_srtt < 1) then kcp^.rx_srtt := 1;
   end;
-  rto := kcp^.rx_srtt + _imax_(1, 4 * kcp^.rx_rttval);
+  rto := kcp^.rx_srtt + _imax_(kcp^.interval, 4 * kcp^.rx_rttval);
   kcp^.rx_rto := _ibound_(kcp^.rx_minrto, rto, IKCP_RTO_MAX);
 end;
 
@@ -853,7 +853,7 @@ begin
   if (ikcp_canlog(kcp, CONST_IKCP_LOG_INPUT)) then
     ikcp_log(kcp, CONST_IKCP_LOG_INPUT, '[RI] %d bytes', [size]);
 
-  if ((data = nil) or (size < 24)) then Exit(-1);
+  if ((data = nil) or (size < IKCP_OVERHEAD)) then Exit(-1);
 
   while (True) do
   begin
@@ -872,7 +872,7 @@ begin
 
     Dec(size, IKCP_OVERHEAD);
 
-    if (size < len) then Exit(-2);
+    if ((size < len) or (len < 0)) then Exit(-2);
 
     if ((cmd <> IKCP_CMD_PUSH) and (cmd <> IKCP_CMD_ACK) and (cmd <> IKCP_CMD_WASK) and
       (cmd <> IKCP_CMD_WINS)) then Exit(-3);
@@ -1365,7 +1365,7 @@ begin
   if (kcp <> nil) then
   begin
     if (sndwnd > 0) then kcp^.snd_wnd := sndwnd;
-    if (rcvwnd > 0) then kcp^.rcv_wnd := rcvwnd;
+    if (rcvwnd > 0) then kcp^.rcv_wnd := _imax_(rcvwnd,IKCP_WND_RCV);// must >= max fragment size
   end;
   Result := 0;
 end;
